@@ -1,42 +1,40 @@
-FROM rust:1.75-slim as builder
+# syntax=docker/dockerfile:1
 
-# Install system dependencies
+FROM rust:latest AS build
+
+# Install build dependencies
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Trunk for building the Yew app and the wasm target
+RUN cargo install trunk --locked && \
+    rustup target add wasm32-unknown-unknown
+
 WORKDIR /app
 
-# Copy workspace files
+# Copy workspace manifests first for efficient Docker caching
 COPY Cargo.toml ./
-COPY backend/Cargo.toml ./backend/
+COPY frontend/Cargo.toml ./frontend/
 COPY shared/Cargo.toml ./shared/
 
-# Copy source code
-COPY shared/ ./shared/
-COPY backend/ ./backend/
+# Copy actual source code
+COPY frontend ./frontend
+COPY shared ./shared
 
-# Build the application
-RUN cargo build --release --bin work-session-tracker-backend
+# Build the frontend (output will be written to /dist)
+RUN cd frontend && trunk build --release --dist /dist
 
-# Runtime stage
-FROM debian:bookworm-slim
+# ---------------- Runtime image ----------------
+FROM nginx:1.25-alpine AS runtime
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    libssl3 \
-    && rm -rf /var/lib/apt/lists/*
+# Copy the build artefacts from the previous stage
+COPY --from=build /dist /usr/share/nginx/html
 
-WORKDIR /app
+# Use the custom nginx configuration for SPA routing and API proxying
+COPY frontend/nginx.conf /etc/nginx/nginx.conf
 
-# Copy the binary from builder stage
-COPY --from=builder /app/target/release/work-session-tracker-backend /app/backend
+EXPOSE 8000
 
-# Copy migrations
-COPY backend/migrations/ ./migrations/
-
-EXPOSE 8080
-
-CMD ["./backend"]
+CMD ["nginx", "-g", "daemon off;"]

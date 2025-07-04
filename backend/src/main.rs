@@ -10,6 +10,7 @@ use sqlx::{PgPool, Row};
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{info, instrument};
+use tracing_subscriber::fmt::init;
 use uuid::Uuid;
 
 mod db;
@@ -25,7 +26,7 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::init();
+    init();
 
     dotenvy::dotenv().ok();
 
