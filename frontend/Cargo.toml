@@ -1,0 +1,30 @@
+[package]
+name = "work-session-tracker-frontend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Web framework
+yew = { version = "0.21", features = ["csr"] }
+web-sys = "0.3"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json"] }
+gloo-net = "0.5"
+
+# Routing
+yew-router = "0.18"
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Shared types
+shared = { path = "../shared" }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
