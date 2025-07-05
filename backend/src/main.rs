@@ -1,17 +1,13 @@
 use axum::{
-    extract::{Path, State},
-    http::{HeaderValue, Method},
-    response::Json,
+    http::Method,
     routing::{delete, get, post, put},
     Router,
 };
-use shared::*;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::{info, instrument};
+use tracing::info;
 use tracing_subscriber::fmt::init;
-use uuid::Uuid;
 
 mod db;
 mod handlers;

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use chrono::Utc;
 use shared::*;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 pub struct Database {
@@ -125,7 +125,7 @@ impl Database {
         .fetch_optional(&mut *tx)
         .await?;
 
-        if let Some(session) = &updated_session {
+        if let Some(_session) = &updated_session {
             // Update tags if provided
             if let Some(tag_ids) = req.tag_ids {
                 // Delete existing tags

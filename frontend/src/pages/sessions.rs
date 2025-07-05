@@ -44,7 +44,7 @@ pub fn sessions() -> Html {
         let available_tags = available_tags.clone();
         let show_form = show_form.clone();
         
-        use_effect_with((*show_form), move |show_form| {
+        use_effect_with(*show_form, move |show_form| {
             if *show_form {
                 spawn_local(async move {
                     if let Ok(tags) = api::get_tags().await {
