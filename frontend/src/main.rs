@@ -5,7 +5,6 @@ mod components;
 mod pages;
 mod api;
 
-use components::*;
 use pages::*;
 
 #[derive(Clone, Routable, PartialEq)]
