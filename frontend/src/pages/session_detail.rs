@@ -1,12 +1,13 @@
 use yew::prelude::*;
-use wasm_bindgen_futures::spawn_local;
-use shared::*;
+use yew_router::prelude::*;
 use uuid::Uuid;
+use shared::WorkSessionWithTags;
 use crate::api;
+use crate::Route;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub session_id: String,
+    pub id: Uuid,
 }
 
 #[function_component(SessionDetail)]
@@ -14,127 +15,133 @@ pub fn session_detail(props: &Props) -> Html {
     let session = use_state(|| None::<WorkSessionWithTags>);
     let loading = use_state(|| true);
     let error = use_state(|| None::<String>);
+    let navigator = use_navigator().unwrap();
 
-    // Load session on mount
+    // Load session on component mount
     {
         let session = session.clone();
         let loading = loading.clone();
         let error = error.clone();
-        let session_id = props.session_id.clone();
-        
-        use_effect_with(session_id.clone(), move |session_id| {
-            if let Ok(id) = Uuid::parse_str(session_id) {
-                spawn_local(async move {
-                    match api::get_session(id).await {
-                        Ok(data) => {
-                            session.set(Some(data));
-                            loading.set(false);
-                        }
-                        Err(e) => {
-                            error.set(Some(e));
-                            loading.set(false);
-                        }
-                    }
-                });
-            } else {
-                error.set(Some("Invalid session ID".to_string()));
+        let session_id = props.id;
+
+        use_effect_with(session_id, move |_| {
+            let session = session.clone();
+            let loading = loading.clone();
+            let error = error.clone();
+
+            wasm_bindgen_futures::spawn_local(async move {
+                loading.set(true);
+                error.set(None);
+
+                match api::get_session(session_id).await {
+                    Ok(data) => session.set(Some(data)),
+                    Err(e) => error.set(Some(e)),
+                }
+
                 loading.set(false);
-            }
+            });
+
+            || {}
         });
     }
 
-    let format_duration = |seconds: i32| -> String {
-        let hours = seconds / 3600;
-        let minutes = (seconds % 3600) / 60;
-        let secs = seconds % 60;
+    fn format_duration(duration_seconds: i32) -> String {
+        let hours = duration_seconds / 3600;
+        let minutes = (duration_seconds % 3600) / 60;
+        let secs = duration_seconds % 60;
         
         if hours > 0 {
-            format!("{}h {}m {}s", hours, minutes, secs)
+            format!("{hours}h {minutes}m {secs}s")
         } else if minutes > 0 {
-            format!("{}m {}s", minutes, secs)
+            format!("{minutes}m {secs}s")
         } else {
-            format!("{}s", secs)
+            format!("{secs}s")
         }
+    }
+
+    let on_back = {
+        let navigator = navigator.clone();
+        Callback::from(move |_| {
+            navigator.push(&Route::Sessions);
+        })
     };
 
     html! {
-        <div class="px-4 py-6 sm:px-0">
+        <div class="container mx-auto p-4">
+            <div class="mb-6">
+                <button
+                    onclick={on_back}
+                    class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                >
+                    {"← Back to Sessions"}
+                </button>
+            </div>
+
             if *loading {
-                <div class="bg-white px-4 py-8 text-center rounded-lg shadow">
-                    <p class="text-sm text-gray-500">{"Loading session..."}</p>
+                <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 text-center">
+                    <p class="text-gray-600">{"Loading session..."}</p>
                 </div>
-            } else if let Some(err) = error.as_ref() {
-                <div class="bg-red-50 border border-red-200 rounded-md p-4">
-                    <p class="text-sm text-red-600">{format!("Error: {}", err)}</p>
+            } else if let Some(error_msg) = error.as_ref() {
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    {error_msg}
                 </div>
             } else if let Some(session_data) = session.as_ref() {
-                <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-                    <div class="px-4 py-5 sm:px-6">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900">
-                            {"Session Details"}
-                        </h3>
-                        <p class="mt-1 max-w-2xl text-sm text-gray-500">
-                            {"Information about this work session"}
-                        </p>
+                <div class="bg-white shadow-md rounded px-8 pt-6 pb-8">
+                    <h1 class="text-3xl font-bold mb-6 text-gray-900">
+                        {session_data.description.as_ref().unwrap_or(&"No description".to_string())}
+                    </h1>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h2 class="text-xl font-semibold mb-4 text-gray-800">{"Session Details"}</h2>
+                            <div class="space-y-3">
+                                <div>
+                                    <span class="font-medium text-gray-700">{"Duration: "}</span>
+                                    <span class="text-lg font-semibold text-blue-600">
+                                        {format_duration(session_data.duration_seconds)}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-gray-700">{"Created: "}</span>
+                                    <span class="text-gray-600">
+                                        {session_data.created_at.format("%Y-%m-%d %H:%M:%S").to_string()}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-gray-700">{"Updated: "}</span>
+                                    <span class="text-gray-600">
+                                        {session_data.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h2 class="text-xl font-semibold mb-4 text-gray-800">{"Tags"}</h2>
+                            if session_data.tags.is_empty() {
+                                <p class="text-gray-500 italic">{"No tags assigned to this session"}</p>
+                            } else {
+                                <div class="flex flex-wrap gap-2">
+                                    {for session_data.tags.iter().map(|tag| {
+                                        let default_color = "#6B7280".to_string();
+                                        let color = tag.color.as_ref().unwrap_or(&default_color);
+                                        html! {
+                                            <span 
+                                                class="inline-block rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm"
+                                                style={format!("background-color: {color}")}
+                                            >
+                                                {&tag.name}
+                                            </span>
+                                        }
+                                    })}
+                                </div>
+                            }
+                        </div>
                     </div>
-                    <div class="border-t border-gray-200">
-                        <dl>
-                            <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt class="text-sm font-medium text-gray-500">{"Duration"}</dt>
-                                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                                    {format_duration(session_data.duration_seconds)}
-                                </dd>
-                            </div>
-                            <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt class="text-sm font-medium text-gray-500">{"Description"}</dt>
-                                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                                    {session_data.description.as_ref().unwrap_or(&"No description".to_string())}
-                                </dd>
-                            </div>
-                            <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt class="text-sm font-medium text-gray-500">{"Tags"}</dt>
-                                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                                    if session_data.tags.is_empty() {
-                                        <span class="text-gray-500">{"No tags"}</span>
-                                    } else {
-                                        <div class="flex flex-wrap gap-2">
-                                            {for session_data.tags.iter().map(|tag| {
-                                                html! {
-                                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                                        {if let Some(color) = &tag.color {
-                                                            html! {
-                                                                <>
-                                                                    <div 
-                                                                        class="h-2 w-2 rounded-full mr-2"
-                                                                        style={format!("background-color: {}", color)}
-                                                                    ></div>
-                                                                    {&tag.name}
-                                                                </>
-                                                            }
-                                                        } else {
-                                                            html! { {&tag.name} }
-                                                        }}
-                                                    </span>
-                                                }
-                                            })}
-                                        </div>
-                                    }
-                                </dd>
-                            </div>
-                            <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt class="text-sm font-medium text-gray-500">{"Created"}</dt>
-                                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                                    {session_data.created_at.format("%Y-%m-%d %H:%M:%S UTC").to_string()}
-                                </dd>
-                            </div>
-                            <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt class="text-sm font-medium text-gray-500">{"Last Updated"}</dt>
-                                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                                    {session_data.updated_at.format("%Y-%m-%d %H:%M:%S UTC").to_string()}
-                                </dd>
-                            </div>
-                        </dl>
-                    </div>
+                </div>
+            } else {
+                <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 text-center">
+                    <p class="text-gray-600">{"Session not found"}</p>
                 </div>
             }
         </div>
