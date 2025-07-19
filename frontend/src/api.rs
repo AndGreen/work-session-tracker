@@ -1,5 +1,5 @@
 use gloo_net::http::Request;
-use shared::{ApiResponse, CreateSessionRequest, CreateTagRequest, Tag, UpdateSessionRequest, UpdateTagRequest, WorkSessionWithTags};
+use shared::{ApiResponse, CreateSessionRequest, CreateTagRequest, Tag, UpdateSessionRequest, UpdateTagRequest, WorkSession, WorkSessionWithTags};
 use uuid::Uuid;
 
 const API_BASE: &str = "http://localhost:8080/api";
@@ -47,7 +47,7 @@ pub async fn get_session(id: Uuid) -> Result<WorkSessionWithTags, String> {
     parse_api_response(&text)
 }
 
-pub async fn create_session(req: CreateSessionRequest) -> Result<WorkSessionWithTags, String> {
+pub async fn create_session(req: CreateSessionRequest) -> Result<WorkSession, String> {
     let response = Request::post(&format!("{API_BASE}/sessions"))
         .json(&req)
         .map_err(|e| format!("Failed to serialize request: {e}"))?

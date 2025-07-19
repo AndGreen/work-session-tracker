@@ -80,14 +80,21 @@ pub fn sessions() -> Html {
                     tag_ids: (*selected_tags).clone(),
                 };
 
-                if (api::create_session(req).await).is_ok() {
-                    match api::get_sessions().await {
-                        Ok(data) => {
-                            sessions.set(data);
-                            description.set(String::new());
-                            selected_tags.set(Vec::new());
+                match api::create_session(req).await {
+                    Ok(_) => {
+                        // Session created successfully, now refresh the list
+                        match api::get_sessions().await {
+                            Ok(data) => {
+                                sessions.set(data);
+                                // Clear the form only after successful creation and refresh
+                                description.set(String::new());
+                                selected_tags.set(Vec::new());
+                            }
+                            Err(e) => error.set(Some(format!("Session created but failed to refresh list: {}", e))),
                         }
-                        Err(e) => error.set(Some(e)),
+                    }
+                    Err(e) => {
+                        error.set(Some(format!("Failed to create session: {}", e)));
                     }
                 }
 
