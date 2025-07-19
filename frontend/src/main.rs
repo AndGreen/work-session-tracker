@@ -1,11 +1,11 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
+use uuid::Uuid;
 
-mod components;
-mod pages;
 mod api;
+mod pages;
 
-use pages::*;
+use pages::{Sessions, Tags, SessionDetail};
 
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
@@ -13,18 +13,24 @@ enum Route {
     Home,
     #[at("/sessions")]
     Sessions,
-    #[at("/tags")]
-    Tags,
     #[at("/sessions/:id")]
     SessionDetail { id: String },
+    #[at("/tags")]
+    Tags,
 }
 
 fn switch(routes: Route) -> Html {
     match routes {
-        Route::Home => html! { <Home /> },
+        Route::Home => html! { <Redirect<Route> to={Route::Sessions}/> },
         Route::Sessions => html! { <Sessions /> },
+        Route::SessionDetail { id } => {
+            if let Ok(uuid) = Uuid::parse_str(&id) {
+                html! { <SessionDetail id={uuid} /> }
+            } else {
+                html! { <div>{"Invalid session ID"}</div> }
+            }
+        },
         Route::Tags => html! { <Tags /> },
-        Route::SessionDetail { id } => html! { <SessionDetail session_id={id} /> },
     }
 }
 
@@ -33,23 +39,18 @@ fn app() -> Html {
     html! {
         <BrowserRouter>
             <div class="min-h-screen bg-gray-50">
-                <nav class="bg-white shadow-sm">
+                <nav class="bg-white shadow">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div class="flex justify-between h-16">
                             <div class="flex">
                                 <div class="flex-shrink-0 flex items-center">
-                                    <h1 class="text-xl font-semibold text-gray-900">
-                                        {"Work Session Tracker"}
-                                    </h1>
+                                    <h1 class="text-xl font-bold text-gray-900">{"Work Session Tracker"}</h1>
                                 </div>
-                                <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                                    <Link<Route> to={Route::Home} classes="border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                                        {"Home"}
-                                    </Link<Route>>
-                                    <Link<Route> to={Route::Sessions} classes="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                <div class="ml-6 flex space-x-8">
+                                    <Link<Route> to={Route::Sessions} classes="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
                                         {"Sessions"}
                                     </Link<Route>>
-                                    <Link<Route> to={Route::Tags} classes="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                    <Link<Route> to={Route::Tags} classes="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
                                         {"Tags"}
                                     </Link<Route>>
                                 </div>
@@ -57,7 +58,8 @@ fn app() -> Html {
                         </div>
                     </div>
                 </nav>
-                <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                
+                <main class="py-10">
                     <Switch<Route> render={switch} />
                 </main>
             </div>

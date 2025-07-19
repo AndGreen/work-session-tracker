@@ -1,165 +1,138 @@
 use gloo_net::http::Request;
-use shared::*;
+use shared::{CreateSessionRequest, CreateTagRequest, Tag, UpdateSessionRequest, UpdateTagRequest, WorkSessionWithTags};
 use uuid::Uuid;
 
-const API_BASE: &str = "http://localhost:8080/api";
+const API_BASE: &str = "http://localhost:3000/api";
 
 pub async fn get_sessions() -> Result<Vec<WorkSessionWithTags>, String> {
-    let response = Request::get(&format!("{}/sessions", API_BASE))
+    let response = Request::get(&format!("{API_BASE}/sessions"))
         .send()
         .await
-        .map_err(|e| format!("Request failed: {}", e))?;
+        .map_err(|e| format!("Request failed: {e}"))?;
 
-    if response.ok() {
-        let api_response: ApiResponse<Vec<WorkSessionWithTags>> = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-        
-        api_response.data.ok_or_else(|| "No data in response".to_string())
-    } else {
-        Err(format!("Request failed with status: {}", response.status()))
-    }
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to parse response: {e}"))?;
+
+    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
 }
 
 pub async fn get_session(id: Uuid) -> Result<WorkSessionWithTags, String> {
-    let response = Request::get(&format!("{}/sessions/{}", API_BASE, id))
+    let response = Request::get(&format!("{API_BASE}/sessions/{id}"))
         .send()
         .await
-        .map_err(|e| format!("Request failed: {}", e))?;
+        .map_err(|e| format!("Request failed: {e}"))?;
 
-    if response.ok() {
-        let api_response: ApiResponse<WorkSessionWithTags> = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-        
-        api_response.data.ok_or_else(|| "No data in response".to_string())
-    } else {
-        Err(format!("Request failed with status: {}", response.status()))
-    }
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to parse response: {e}"))?;
+
+    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
 }
 
-pub async fn create_session(req: CreateSessionRequest) -> Result<WorkSession, String> {
-    let response = Request::post(&format!("{}/sessions", API_BASE))
+pub async fn create_session(req: CreateSessionRequest) -> Result<WorkSessionWithTags, String> {
+    let response = Request::post(&format!("{API_BASE}/sessions"))
         .json(&req)
-        .map_err(|e| format!("Failed to serialize request: {}", e))?
+        .map_err(|e| format!("Failed to serialize request: {e}"))?
         .send()
         .await
-        .map_err(|e| format!("Request failed: {}", e))?;
+        .map_err(|e| format!("Request failed: {e}"))?;
 
-    if response.ok() {
-        let api_response: ApiResponse<WorkSession> = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-        
-        api_response.data.ok_or_else(|| "No data in response".to_string())
-    } else {
-        Err(format!("Request failed with status: {}", response.status()))
-    }
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to parse response: {e}"))?;
+
+    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
 }
 
-pub async fn update_session(id: Uuid, req: UpdateSessionRequest) -> Result<WorkSession, String> {
-    let response = Request::put(&format!("{}/sessions/{}", API_BASE, id))
+#[allow(dead_code)]
+pub async fn update_session(id: Uuid, req: UpdateSessionRequest) -> Result<WorkSessionWithTags, String> {
+    let response = Request::put(&format!("{API_BASE}/sessions/{id}"))
         .json(&req)
-        .map_err(|e| format!("Failed to serialize request: {}", e))?
+        .map_err(|e| format!("Failed to serialize request: {e}"))?
         .send()
         .await
-        .map_err(|e| format!("Request failed: {}", e))?;
+        .map_err(|e| format!("Request failed: {e}"))?;
 
-    if response.ok() {
-        let api_response: ApiResponse<WorkSession> = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-        
-        api_response.data.ok_or_else(|| "No data in response".to_string())
-    } else {
-        Err(format!("Request failed with status: {}", response.status()))
-    }
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to parse response: {e}"))?;
+
+    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
 }
 
 pub async fn delete_session(id: Uuid) -> Result<(), String> {
-    let response = Request::delete(&format!("{}/sessions/{}", API_BASE, id))
+    let response = Request::delete(&format!("{API_BASE}/sessions/{id}"))
         .send()
         .await
-        .map_err(|e| format!("Request failed: {}", e))?;
+        .map_err(|e| format!("Request failed: {e}"))?;
 
     if response.ok() {
         Ok(())
     } else {
-        Err(format!("Request failed with status: {}", response.status()))
+        Err("Failed to delete session".to_string())
     }
 }
 
 pub async fn get_tags() -> Result<Vec<Tag>, String> {
-    let response = Request::get(&format!("{}/tags", API_BASE))
+    let response = Request::get(&format!("{API_BASE}/tags"))
         .send()
         .await
-        .map_err(|e| format!("Request failed: {}", e))?;
+        .map_err(|e| format!("Request failed: {e}"))?;
 
-    if response.ok() {
-        let api_response: ApiResponse<Vec<Tag>> = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-        
-        api_response.data.ok_or_else(|| "No data in response".to_string())
-    } else {
-        Err(format!("Request failed with status: {}", response.status()))
-    }
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to parse response: {e}"))?;
+
+    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
 }
 
 pub async fn create_tag(req: CreateTagRequest) -> Result<Tag, String> {
-    let response = Request::post(&format!("{}/tags", API_BASE))
+    let response = Request::post(&format!("{API_BASE}/tags"))
         .json(&req)
-        .map_err(|e| format!("Failed to serialize request: {}", e))?
+        .map_err(|e| format!("Failed to serialize request: {e}"))?
         .send()
         .await
-        .map_err(|e| format!("Request failed: {}", e))?;
+        .map_err(|e| format!("Request failed: {e}"))?;
 
-    if response.ok() {
-        let api_response: ApiResponse<Tag> = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-        
-        api_response.data.ok_or_else(|| "No data in response".to_string())
-    } else {
-        Err(format!("Request failed with status: {}", response.status()))
-    }
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to parse response: {e}"))?;
+
+    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
 }
 
 pub async fn update_tag(id: Uuid, req: UpdateTagRequest) -> Result<Tag, String> {
-    let response = Request::put(&format!("{}/tags/{}", API_BASE, id))
+    let response = Request::put(&format!("{API_BASE}/tags/{id}"))
         .json(&req)
-        .map_err(|e| format!("Failed to serialize request: {}", e))?
+        .map_err(|e| format!("Failed to serialize request: {e}"))?
         .send()
         .await
-        .map_err(|e| format!("Request failed: {}", e))?;
+        .map_err(|e| format!("Request failed: {e}"))?;
 
-    if response.ok() {
-        let api_response: ApiResponse<Tag> = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-        
-        api_response.data.ok_or_else(|| "No data in response".to_string())
-    } else {
-        Err(format!("Request failed with status: {}", response.status()))
-    }
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to parse response: {e}"))?;
+
+    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
 }
 
 pub async fn delete_tag(id: Uuid) -> Result<(), String> {
-    let response = Request::delete(&format!("{}/tags/{}", API_BASE, id))
+    let response = Request::delete(&format!("{API_BASE}/tags/{id}"))
         .send()
         .await
-        .map_err(|e| format!("Request failed: {}", e))?;
+        .map_err(|e| format!("Request failed: {e}"))?;
 
     if response.ok() {
         Ok(())
     } else {
-        Err(format!("Request failed with status: {}", response.status()))
+        Err("Failed to delete tag".to_string())
     }
 }
