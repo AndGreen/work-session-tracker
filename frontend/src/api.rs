@@ -1,8 +1,23 @@
 use gloo_net::http::Request;
-use shared::{CreateSessionRequest, CreateTagRequest, Tag, UpdateSessionRequest, UpdateTagRequest, WorkSessionWithTags};
+use shared::{ApiResponse, CreateSessionRequest, CreateTagRequest, Tag, UpdateSessionRequest, UpdateTagRequest, WorkSessionWithTags};
 use uuid::Uuid;
 
-const API_BASE: &str = "http://localhost:3000/api";
+const API_BASE: &str = "http://localhost:8080/api";
+
+// Helper function to parse API responses
+fn parse_api_response<T>(text: &str) -> Result<T, String> 
+where 
+    T: serde::de::DeserializeOwned,
+{
+    let api_response: ApiResponse<T> = serde_json::from_str(text)
+        .map_err(|e| format!("Failed to parse API response: {}", e))?;
+    
+    if api_response.success {
+        api_response.data.ok_or_else(|| "No data in successful response".to_string())
+    } else {
+        Err(api_response.message.unwrap_or_else(|| "Unknown API error".to_string()))
+    }
+}
 
 pub async fn get_sessions() -> Result<Vec<WorkSessionWithTags>, String> {
     let response = Request::get(&format!("{API_BASE}/sessions"))
@@ -13,9 +28,9 @@ pub async fn get_sessions() -> Result<Vec<WorkSessionWithTags>, String> {
     let text = response
         .text()
         .await
-        .map_err(|e| format!("Failed to parse response: {e}"))?;
+        .map_err(|e| format!("Failed to get response text: {e}"))?;
 
-    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
+    parse_api_response(&text)
 }
 
 pub async fn get_session(id: Uuid) -> Result<WorkSessionWithTags, String> {
@@ -27,9 +42,9 @@ pub async fn get_session(id: Uuid) -> Result<WorkSessionWithTags, String> {
     let text = response
         .text()
         .await
-        .map_err(|e| format!("Failed to parse response: {e}"))?;
+        .map_err(|e| format!("Failed to get response text: {e}"))?;
 
-    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
+    parse_api_response(&text)
 }
 
 pub async fn create_session(req: CreateSessionRequest) -> Result<WorkSessionWithTags, String> {
@@ -43,9 +58,9 @@ pub async fn create_session(req: CreateSessionRequest) -> Result<WorkSessionWith
     let text = response
         .text()
         .await
-        .map_err(|e| format!("Failed to parse response: {e}"))?;
+        .map_err(|e| format!("Failed to get response text: {e}"))?;
 
-    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
+    parse_api_response(&text)
 }
 
 #[allow(dead_code)]
@@ -60,9 +75,9 @@ pub async fn update_session(id: Uuid, req: UpdateSessionRequest) -> Result<WorkS
     let text = response
         .text()
         .await
-        .map_err(|e| format!("Failed to parse response: {e}"))?;
+        .map_err(|e| format!("Failed to get response text: {e}"))?;
 
-    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
+    parse_api_response(&text)
 }
 
 pub async fn delete_session(id: Uuid) -> Result<(), String> {
@@ -72,9 +87,31 @@ pub async fn delete_session(id: Uuid) -> Result<(), String> {
         .map_err(|e| format!("Request failed: {e}"))?;
 
     if response.ok() {
-        Ok(())
+        let text = response
+            .text()
+            .await
+            .map_err(|e| format!("Failed to get response text: {e}"))?;
+        
+        // Handle empty response body for DELETE requests
+        if text.trim().is_empty() {
+            Ok(())
+        } else {
+            parse_api_response::<()>(&text)
+        }
     } else {
-        Err("Failed to delete session".to_string())
+        let text = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Failed to delete session".to_string());
+        
+        // Try to parse as ApiResponse to get error message
+        if let Ok(api_response) = serde_json::from_str::<ApiResponse<()>>(&text) {
+            if !api_response.success {
+                return Err(api_response.message.unwrap_or_else(|| "Failed to delete session".to_string()));
+            }
+        }
+        
+        Err(format!("Failed to delete session: {}", text))
     }
 }
 
@@ -87,9 +124,9 @@ pub async fn get_tags() -> Result<Vec<Tag>, String> {
     let text = response
         .text()
         .await
-        .map_err(|e| format!("Failed to parse response: {e}"))?;
+        .map_err(|e| format!("Failed to get response text: {e}"))?;
 
-    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
+    parse_api_response(&text)
 }
 
 pub async fn create_tag(req: CreateTagRequest) -> Result<Tag, String> {
@@ -103,9 +140,9 @@ pub async fn create_tag(req: CreateTagRequest) -> Result<Tag, String> {
     let text = response
         .text()
         .await
-        .map_err(|e| format!("Failed to parse response: {e}"))?;
+        .map_err(|e| format!("Failed to get response text: {e}"))?;
 
-    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
+    parse_api_response(&text)
 }
 
 pub async fn update_tag(id: Uuid, req: UpdateTagRequest) -> Result<Tag, String> {
@@ -119,9 +156,9 @@ pub async fn update_tag(id: Uuid, req: UpdateTagRequest) -> Result<Tag, String> 
     let text = response
         .text()
         .await
-        .map_err(|e| format!("Failed to parse response: {e}"))?;
+        .map_err(|e| format!("Failed to get response text: {e}"))?;
 
-    serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))
+    parse_api_response(&text)
 }
 
 pub async fn delete_tag(id: Uuid) -> Result<(), String> {
@@ -131,8 +168,30 @@ pub async fn delete_tag(id: Uuid) -> Result<(), String> {
         .map_err(|e| format!("Request failed: {e}"))?;
 
     if response.ok() {
-        Ok(())
+        let text = response
+            .text()
+            .await
+            .map_err(|e| format!("Failed to get response text: {e}"))?;
+        
+        // Handle empty response body for DELETE requests
+        if text.trim().is_empty() {
+            Ok(())
+        } else {
+            parse_api_response::<()>(&text)
+        }
     } else {
-        Err("Failed to delete tag".to_string())
+        let text = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Failed to delete tag".to_string());
+        
+        // Try to parse as ApiResponse to get error message
+        if let Ok(api_response) = serde_json::from_str::<ApiResponse<()>>(&text) {
+            if !api_response.success {
+                return Err(api_response.message.unwrap_or_else(|| "Failed to delete tag".to_string()));
+            }
+        }
+        
+        Err(format!("Failed to delete tag: {}", text))
     }
 }

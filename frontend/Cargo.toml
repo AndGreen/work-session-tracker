@@ -26,5 +26,5 @@ serde_json = { workspace = true }
 shared = { path = "../shared" }
 
 # Utilities
-uuid = { workspace = true }
+uuid = { version = "1.0", features = ["v4", "serde", "js"] }
 chrono = { workspace = true }
