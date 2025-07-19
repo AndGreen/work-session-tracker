@@ -37,7 +37,3 @@ src/*.rs.orig
 *.core
 *.stackdump
 *.dSYM
-
-# SQLx
-sqlx-data.json
-.sqlx/

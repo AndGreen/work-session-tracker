@@ -32,9 +32,16 @@ FROM nginx:1.25-alpine AS runtime
 # Copy the build artefacts from the previous stage
 COPY --from=build /dist /usr/share/nginx/html
 
-# Use the custom nginx configuration for SPA routing and API proxying
-COPY frontend/nginx.conf /etc/nginx/nginx.conf
+# Use Railway-optimized nginx configuration for production
+COPY frontend/nginx-railway.conf /etc/nginx/nginx.conf
+
+# Create a script to substitute environment variables in nginx config
+RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
+    echo 'envsubst < /etc/nginx/nginx.conf > /tmp/nginx.conf' >> /docker-entrypoint.sh && \
+    echo 'mv /tmp/nginx.conf /etc/nginx/nginx.conf' >> /docker-entrypoint.sh && \
+    echo 'exec nginx -g "daemon off;"' >> /docker-entrypoint.sh && \
+    chmod +x /docker-entrypoint.sh
 
 EXPOSE 8000
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/docker-entrypoint.sh"]

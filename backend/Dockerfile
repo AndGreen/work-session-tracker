@@ -27,8 +27,8 @@ COPY shared/ ./shared/
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
 
-# Set DATABASE_URL for sqlx compile-time checks
-ENV DATABASE_URL postgres://postgres:password@postgres:5432/work_tracker
+# Set SQLx to offline mode for Railway deployment (no database access during build)
+ENV SQLX_OFFLINE=true
 
 # Build the application
 RUN cargo build --release --bin work-session-tracker-backend
@@ -40,6 +40,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -50,6 +51,11 @@ COPY --from=builder /app/target/release/work-session-tracker-backend /app/backen
 # Copy migrations
 COPY backend/migrations/ ./migrations/
 
-EXPOSE 8080
+# Railway uses PORT environment variable
+EXPOSE $PORT
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8080}/api/sessions || exit 1
 
 CMD ["./backend"]

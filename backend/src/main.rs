@@ -38,10 +38,12 @@ async fn main() -> anyhow::Result<()> {
     let db = Arc::new(Database::new(pool));
     let app_state = AppState { db };
 
+    // Configure CORS for Railway deployment
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers(Any)
-        .allow_origin(Any);
+        .allow_origin(Any) // In production, consider restricting to specific domains
+        .allow_credentials(false);
 
     let app = Router::new()
         .route("/api/sessions", get(get_sessions))
@@ -57,8 +59,12 @@ async fn main() -> anyhow::Result<()> {
         .layer(cors)
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
-    info!("Server running on http://0.0.0.0:8080");
+    let port = std::env::var("PORT")
+        .unwrap_or_else(|_| "8080".to_string());
+    let bind_address = format!("0.0.0.0:{}", port);
+    
+    let listener = tokio::net::TcpListener::bind(&bind_address).await?;
+    info!("Server running on http://{}", bind_address);
     
     axum::serve(listener, app).await?;
 

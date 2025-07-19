@@ -115,12 +115,34 @@ trunk serve
 
 ## Deployment
 
-The application is designed to be deployed with Docker Compose and works well on platforms like Railway, Heroku, or any Docker-compatible hosting service.
+### Quick Deploy to Railway 🚂
+
+The easiest way to deploy is using Railway:
+
+```bash
+# Run the automated deployment script
+./deploy-railway.sh
+```
+
+Or deploy manually:
+1. See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for detailed instructions
+2. Install [Railway CLI](https://docs.railway.app/quick-start)
+3. Run `railway login && railway init`
+4. Deploy with `railway up`
+
+### Docker Compose
+
+For self-hosting with Docker:
+
+```bash
+docker-compose up --build -d
+```
 
 ### Environment Variables
 
 - `DATABASE_URL` - PostgreSQL connection string
 - `RUST_LOG` - Logging level (optional, defaults to "info")
+- `PORT` - Server port (optional, defaults to 8080)
 
 ## Development with Claude Code
 

@@ -1,0 +1,40 @@
+# PostgreSQL database service (deploys first)
+[[services]]
+name = "postgres"
+type = "database"
+databaseType = "postgresql"
+
+# Backend service configuration (depends on postgres)
+[[services]]
+name = "backend"
+source = "."
+dockerfile = "backend/Dockerfile"
+
+[services.deploy]
+startCommand = "./backend"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[services.dependencies]
+services = ["postgres"]
+
+[services.variables]
+RUST_LOG = "info"
+DATABASE_URL = "${{ postgres.DATABASE_URL }}"
+
+# Frontend service configuration (depends on backend)
+[[services]]
+name = "frontend"
+source = "."
+dockerfile = "frontend/Dockerfile"
+
+[services.deploy]
+startCommand = "/docker-entrypoint.sh"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+
+[services.dependencies]
+services = ["backend"]
+
+[services.variables]
+BACKEND_URL = "${{ backend.RAILWAY_PRIVATE_DOMAIN }}"

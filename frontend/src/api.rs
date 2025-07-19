@@ -2,7 +2,14 @@ use gloo_net::http::Request;
 use shared::{ApiResponse, CreateSessionRequest, CreateTagRequest, Tag, UpdateSessionRequest, UpdateTagRequest, WorkSession, WorkSessionWithTags};
 use uuid::Uuid;
 
-const API_BASE: &str = "http://localhost:8080/api";
+// API base URL - automatically detects environment
+const API_BASE: &str = if cfg!(debug_assertions) {
+    // Development: direct connection to backend
+    "http://localhost:8080/api"
+} else {
+    // Production: proxy through nginx to backend
+    "/api"
+};
 
 // Helper function to parse API responses
 fn parse_api_response<T>(text: &str) -> Result<T, String> 
